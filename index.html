@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pom-Pomodoro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brown-dark:   #3d2b1a;
+      --brown-mid:    #5c3d1e;
+      --brown-light:  #8b6340;
+      --parchment:    #f5e6c8;
+      --parchment2:   #eedcb0;
+      --parchment3:   #e0c88a;
+      --grass-light:  #6aab5b;
+      --grass-dark:   #2d5221;
+      --gold:         #d4a017;
+      --gold-light:   #f5d060;
+      --red-sdv:      #c0392b;
+      --red-light:    #f5b7b1;
+      --teal-sdv:     #1a8c6e;
+      --teal-light:   #a8dfd0;
+      --purple-sdv:   #6c3483;
+      --purple-light: #d7bde2;
+    }
+
+    body {
+      font-family: 'VT323', monospace;
+      background: var(--grass-dark);
+      color: var(--brown-dark);
+      height: 100vh;
+      overflow: hidden;
+      font-size: 16px;
+    }
+
+    #app {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ════════════ LEFT GARDEN PANEL ════════════ */
+    #garden-panel {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sky strip — Pom-Pom bounces here */
+    #sky-strip {
+      position: relative;
+      flex: 0 0 30%;
+      background: linear-gradient(to bottom, #7ec8e3 0%, #c8ecf5 100%);
+      overflow: hidden;
+    }
+
+    #sun {
+      position: absolute;
+      top: 14px; right: 48px;
+      width: 32px; height: 32px;
+      background: var(--gold-light);
+      border: 3px solid var(--gold);
+      z-index: 2;
+      box-shadow: 0 0 0 5px rgba(245,208,96,0.22);
+      animation: sunPulse 4s ease-in-out infinite;
+    }
+    @keyframes sunPulse {
+      0%,100% { box-shadow: 0 0 0 5px rgba(245,208,96,0.22); }
+      50%      { box-shadow: 0 0 0 14px rgba(245,208,96,0.07); }
+    }
+
+    .cloud {
+      position: absolute;
+      background: #fff;
+      border: 2px solid #dde;
+      z-index: 1;
+      animation: cloudDrift linear infinite;
+      opacity: 0.88;
+    }
+    .cloud-bump {
+      position: absolute;
+      background: #fff;
+      border: 2px solid #dde;
+    }
+    @keyframes cloudDrift {
+      from { transform: translateX(-220px); }
+      to   { transform: translateX(110vw);  }
+    }
+
+    #garden-sign {
+      position: absolute;
+      top: 10px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: var(--brown-mid);
+      border: 3px solid var(--brown-dark);
+      padding: 4px 14px;
+      box-shadow: 3px 3px 0 var(--brown-dark);
+      white-space: nowrap;
+    }
+    #garden-sign span {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--parchment);
+      letter-spacing: 1px;
+    }
+
+    /* Pom-Pom canvas — fills bottom of sky strip */
+    #pompom-canvas {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; height: 80px;
+      z-index: 3;
+    }
+
+    /* Garden floor — holds 5x5 grid */
+    #garden-floor {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Tilled soil rows background */
+    #soil-bg {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        #5c3d1e 0px, #5c3d1e 28px,
+        #6b4a25 28px, #6b4a25 56px
+      );
+    }
+    /* Grass fringe at top */
+    #grass-fringe {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 20px;
+      background: repeating-linear-gradient(
+        90deg,
+        #6aab5b 0, #6aab5b 6px,
+        #4a7c3f 6px, #4a7c3f 12px
+      );
+      z-index: 1;
+    }
+
+    #garden-grid-wrap {
+      position: absolute;
+      top: 22px; left: 0; right: 0; bottom: 36px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px 6px;
+    }
+    #garden-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 4px;
+      width: 100%;
+      height: 100%;
+    }
+    .plant-slot {
+      background: rgba(92,61,30,0.6);
+      border: 2px solid var(--brown-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      position: relative;
+      cursor: default;
+    }
+    .plant-slot.clickable { cursor: pointer; }
+    .plant-slot.clickable:hover { border-color: var(--gold-light); }
+    .plant-slot.filled { background: rgba(74,124,63,0.5); border-color: var(--grass-dark); }
+    .plant-slot.done-slot { background: rgba(45,82,33,0.65); border-color: var(--teal-sdv); }
+    .plant-slot.active-task-slot {
+      border-color: var(--gold-light) !important;
+      box-shadow: 0 0 0 2px var(--gold), inset 0 0 8px rgba(245,208,96,0.25);
+    }
+    .plant-slot.new-plant { animation: pixelPop 0.35s steps(4) forwards; }
+    @keyframes pixelPop {
+      0%  { transform: scale(0); }
+      60% { transform: scale(1.3); }
+      100%{ transform: scale(1); }
+    }
+    /* Stage label bottom-right of slot */
+    .stage-lbl {
+      position: absolute;
+      bottom: 2px; right: 3px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4px;
+      color: rgba(245,230,200,0.8);
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* Bottom status strip */
+    #ground-strip {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 34px;
+      background: #2a1a0a;
+      border-top: 3px solid #1a0a00;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+    #pompom-status {
+      font-family: 'VT323', monospace;
+      font-size: 14px;
+      color: var(--parchment2);
+    }
+    #avatar-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      cursor: pointer;
+      background: var(--brown-mid);
+      color: var(--parchment2);
+      border: 2px solid var(--brown-light);
+      padding: 3px 7px;
+      box-shadow: 2px 2px 0 #000;
+      transition: all 0.05s;
+    }
+    #avatar-btn:hover { background: var(--brown-light); transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+    #garden-count-badge {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--gold-light);
+      background: #1a0d00;
+      padding: 3px 6px;
+      border: 2px solid var(--gold);
+    }
+
+    /* ── AVATAR MODAL (slides up) ── */
+    #avatar-modal {
+      position: absolute;
+      left: 0; right: 0; bottom: 34px;
+      height: 0;
+      overflow: hidden;
+      background: #3a200e;
+      border-top: 0 solid var(--brown-dark);
+      z-index: 20;
+      transition: height 0.18s steps(5), border-top-width 0.05s;
+    }
+    #avatar-modal.open {
+      height: 84px;
+      border-top: 3px solid var(--brown-dark);
+    }
+    #avatar-modal-inner { padding: 9px 14px; display: flex; flex-direction: column; gap: 8px; }
+    #avatar-modal-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--gold-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #avatar-close {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--parchment2);
+      border: 2px solid var(--brown-light);
+      padding: 2px 6px;
+    }
+    #avatar-close:hover { background: var(--red-sdv); color:#fff; border-color: var(--red-sdv); }
+    #color-row { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+    .color-swatch {
+      width: 20px; height: 20px;
+      border: 2px solid var(--brown-dark);
+      cursor: pointer;
+      transition: transform 0.08s;
+      image-rendering: pixelated;
+    }
+    .color-swatch.active { border-color: var(--gold-light); transform: scale(1.3); box-shadow: 0 0 0 1px #000; }
+
+    /* ════════════ RIGHT PANEL ════════════ */
+    #right-panel {
+      background: var(--parchment);
+      border-left: 4px solid var(--brown-dark);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #titlebar {
+      background: var(--brown-mid);
+      border-bottom: 4px solid var(--brown-dark);
+      padding: 7px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    #titlebar h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--gold-light);
+      text-shadow: 2px 2px 0 var(--brown-dark);
+      letter-spacing: 1px;
+    }
+    #header-actions { display: flex; gap: 5px; }
+
+    .sdv-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      cursor: pointer;
+      background: var(--parchment);
+      color: var(--brown-dark);
+      border: 2px solid var(--brown-dark);
+      padding: 4px 7px;
+      box-shadow: 2px 2px 0 var(--brown-dark);
+      transition: all 0.05s;
+      line-height: 1.4;
+    }
+    .sdv-btn:hover { background: var(--parchment3); transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--brown-dark); }
+    .sdv-btn:active { transform: translate(2px,2px); box-shadow: none; }
+    .sdv-btn.primary { background: var(--teal-sdv); color: var(--parchment); border-color: var(--grass-dark); box-shadow: 2px 2px 0 var(--grass-dark); }
+    .sdv-btn.primary:hover { background: var(--grass-dark); }
+    .sdv-btn.danger { background: var(--red-light); color: var(--red-sdv); border-color: var(--red-sdv); box-shadow: 2px 2px 0 var(--red-sdv); }
+
+    /* Timer */
+    #timer-section {
+      background: var(--parchment2);
+      border-bottom: 4px solid var(--brown-dark);
+      padding: 9px 14px;
+      flex-shrink: 0;
+    }
+    .section-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--brown-light);
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-label::after {
+      content:''; flex:1; height:2px;
+      background: repeating-linear-gradient(90deg, var(--brown-light) 0,var(--brown-light) 4px,transparent 4px,transparent 8px);
+    }
+    #timer-display { text-align:center; margin-bottom:5px; }
+    #timer-time {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 28px;
+      color: var(--brown-dark);
+      letter-spacing: 3px;
+      text-shadow: 3px 3px 0 var(--brown-light);
+      font-variant-numeric: tabular-nums;
+    }
+    #timer-label { font-family:'VT323',monospace; font-size:15px; color:var(--brown-light); margin-top:1px; }
+    #timer-progress {
+      height:11px; background:var(--brown-dark); border:2px solid var(--brown-dark);
+      margin-bottom:7px; overflow:hidden; position:relative;
+    }
+    #timer-progress::before {
+      content:''; position:absolute; inset:0; z-index:1;
+      background: repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0,rgba(255,255,255,.05) 8px,transparent 8px,transparent 16px);
+    }
+    #timer-bar { height:100%; background:var(--red-sdv); transition:width .5s linear; }
+    #timer-controls { display:flex; gap:5px; margin-bottom:7px; }
+    #timer-controls .sdv-btn { flex:1; text-align:center; }
+    #timer-mode-row { display:flex; gap:5px; margin-bottom:7px; }
+    .timer-mode-btn {
+      font-family:'Press Start 2P',monospace; font-size:6px;
+      flex:1; text-align:center; cursor:pointer; padding:4px 6px;
+      border:2px solid var(--brown-dark); background:var(--parchment);
+      color:var(--brown-mid); box-shadow:2px 2px 0 var(--brown-dark); transition:all .05s;
+    }
+    .timer-mode-btn.active { background:var(--red-sdv); color:var(--parchment); border-color:#8b1c12; box-shadow:2px 2px 0 #8b1c12; }
+    .timer-mode-btn.active.break-active { background:var(--teal-sdv); border-color:var(--grass-dark); box-shadow:2px 2px 0 var(--grass-dark); }
+    #timer-settings { display:flex; gap:8px; }
+    #timer-settings label {
+      flex:1; font-family:'VT323',monospace; font-size:13px; color:var(--brown-mid);
+      display:flex; flex-direction:column; gap:2px;
+    }
+    #timer-settings input[type=number] {
+      font-family:'Press Start 2P',monospace; font-size:9px;
+      width:100%; padding:4px 6px; border:2px solid var(--brown-dark);
+      background:var(--parchment); color:var(--brown-dark); outline:none;
+    }
+    #pomodoro-count { font-family:'VT323',monospace; font-size:14px; color:var(--brown-light); text-align:center; margin-top:5px; }
+    #pomodoro-count span { color:var(--red-sdv); }
+
+    /* Tasks */
+    #tasks-section { flex:1; display:flex; flex-direction:column; overflow:hidden; padding:9px 14px 0; }
+    #tasks-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    #add-task-row { display:flex; gap:5px; margin-bottom:7px; flex-shrink:0; }
+    #add-task-row input[type=text] {
+      flex:1; font-family:'VT323',monospace; font-size:15px;
+      border:2px solid var(--brown-dark); background:var(--parchment);
+      color:var(--brown-dark); padding:4px 8px; outline:none;
+    }
+    #add-task-row input[type=text]::placeholder { color:var(--brown-light); opacity:.7; }
+    #add-task-row input[type=text]:focus { border-color:var(--teal-sdv); }
+    #add-task-row select {
+      font-family:'VT323',monospace; font-size:14px;
+      border:2px solid var(--brown-dark); background:var(--parchment2);
+      color:var(--brown-dark); padding:4px 5px; cursor:pointer; outline:none; width:82px;
+    }
+    #task-list {
+      flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding-right:2px;
+      scrollbar-width:thin; scrollbar-color:var(--brown-light) var(--parchment2);
+    }
+    #task-list::-webkit-scrollbar { width:6px; }
+    #task-list::-webkit-scrollbar-track { background:var(--parchment2); }
+    #task-list::-webkit-scrollbar-thumb { background:var(--brown-light); border:1px solid var(--brown-dark); }
+
+    .task-item {
+      display:flex; align-items:flex-start; gap:7px;
+      padding:6px 8px; background:var(--parchment2);
+      border:2px solid var(--brown-light); box-shadow:2px 2px 0 var(--brown-light);
+      cursor:pointer; transition:border-color .1s;
+    }
+    .task-item:hover { border-color:var(--brown-dark); box-shadow:2px 2px 0 var(--brown-dark); }
+    .task-item.active-task { border-color:var(--gold); box-shadow:2px 2px 0 var(--gold); background:#fdf3d8; }
+    .task-item.done { opacity:.5; cursor:default; }
+    .task-item.done .task-title { text-decoration:line-through; }
+
+    .task-check {
+      width:16px; height:16px; border:2px solid var(--brown-dark);
+      background:var(--parchment); cursor:pointer; flex-shrink:0;
+      margin-top:2px; display:flex; align-items:center; justify-content:center;
+    }
+    .task-check.checked { background:var(--teal-sdv); border-color:var(--grass-dark); }
+    .task-check.checked::after { content:'✓'; font-size:11px; color:var(--parchment); line-height:1; }
+
+    .task-body { flex:1; min-width:0; }
+    .task-title { font-family:'VT323',monospace; font-size:15px; color:var(--brown-dark); word-break:break-word; line-height:1.2; }
+    .task-meta { display:flex; gap:5px; margin-top:2px; flex-wrap:wrap; align-items:center; }
+    .task-badge { font-family:'Press Start 2P',monospace; font-size:5px; padding:2px 5px; border:1px solid currentColor; }
+    .badge-tea       { background:var(--teal-light);  color:var(--teal-sdv); }
+    .badge-berry     { background:var(--red-light);   color:var(--red-sdv); }
+    .badge-sunflower { background:#faeeda;             color:#8a5a00; }
+    .badge-bonsai    { background:#dff0db;             color:var(--grass-dark); }
+    .badge-blossom   { background:var(--purple-light); color:var(--purple-sdv); }
+    .task-dur { font-family:'VT323',monospace; font-size:13px; color:var(--brown-light); }
+    .task-stage-info { font-family:'Press Start 2P',monospace; font-size:5px; color:var(--gold); }
+    .task-ai-result {
+      margin-top:4px; padding:4px 6px; background:var(--parchment);
+      border:1px dashed var(--brown-light); font-family:'VT323',monospace;
+      font-size:13px; color:var(--brown-mid); line-height:1.3;
+    }
+    .task-actions { display:flex; gap:3px; flex-shrink:0; }
+    .task-actions .sdv-btn { font-size:5px; padding:3px 5px; }
+    .task-actions .ai-btn { background:var(--purple-light); color:var(--purple-sdv); border-color:var(--purple-sdv); box-shadow:2px 2px 0 var(--purple-sdv); }
+    .task-actions .ai-btn:hover { background:var(--purple-sdv); color:#fff; }
+
+    #empty-tasks { font-family:'VT323',monospace; font-size:16px; color:var(--brown-light); text-align:center; padding:18px 0; line-height:1.6; }
+    .ai-loading { font-family:'VT323',monospace; font-size:13px; color:var(--brown-light); font-style:italic; }
+
+    #bottom-bar {
+      flex-shrink:0; border-top:3px solid var(--brown-light);
+      background:var(--parchment2); padding:6px 14px;
+      display:flex; gap:6px; align-items:center;
+    }
+    #bottom-bar .sdv-btn { flex:1; font-size:5px; text-align:center; }
+    #bottom-bar-note { font-family:'VT323',monospace; font-size:11px; color:var(--brown-light); flex:2; text-align:right; line-height:1.2; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ LEFT: GARDEN ══════════ -->
+  <div id="garden-panel">
+
+    <!-- Sky strip: Pom-Pom walks at top -->
+    <div id="sky-strip">
+      <div id="sun"></div>
+      <div class="cloud" style="top:16px;left:0;width:70px;height:15px;animation-duration:58s;animation-delay:-9s;">
+        <div class="cloud-bump" style="top:-10px;left:8px;width:26px;height:14px;"></div>
+        <div class="cloud-bump" style="top:-7px;left:26px;width:20px;height:11px;"></div>
+      </div>
+      <div class="cloud" style="top:40px;left:0;width:48px;height:11px;animation-duration:82s;animation-delay:-38s;opacity:.6;">
+        <div class="cloud-bump" style="top:-7px;left:7px;width:17px;height:10px;"></div>
+      </div>
+      <div id="garden-sign"><span>🌿 MY FARM 🌿</span></div>
+      <canvas id="pompom-canvas"></canvas>
+    </div>
+
+    <!-- Garden floor: 5x5 slots -->
+    <div id="garden-floor">
+      <div id="soil-bg"></div>
+      <div id="grass-fringe"></div>
+      <div id="garden-grid-wrap">
+        <div id="garden-grid"></div>
+      </div>
+      <div id="ground-strip">
+        <div id="pompom-status">Bouncing...</div>
+        <button id="avatar-btn" onclick="toggleAvatarModal()">SETTINGS</button>
+        <div id="garden-count-badge">🌱 <span id="garden-count">0/25</span></div>
+      </div>
+    </div>
+
+    <!-- Avatar settings modal -->
+    <div id="avatar-modal">
+      <div id="avatar-modal-inner">
+        <div id="avatar-modal-title">
+          <span>🎨 CHOOSE COLOR</span>
+          <button id="avatar-close" onclick="toggleAvatarModal()">✕ CLOSE</button>
+        </div>
+        <div id="color-row"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════ RIGHT PANEL ══════════ -->
+  <div id="right-panel">
+    <div id="titlebar">
+      <h1>🍅 POM-POMODORO</h1>
+      <div id="header-actions">
+        <button class="sdv-btn" onclick="saveData()">SAVE</button>
+        <button class="sdv-btn" onclick="document.getElementById('load-input').click()">LOAD</button>
+        <input type="file" id="load-input" accept=".json" style="display:none" onchange="loadData(event)">
+      </div>
+    </div>
+
+    <div id="timer-section">
+      <div class="section-label">⏰ TIMER</div>
+      <div id="timer-display">
+        <div id="timer-time">25:00</div>
+        <div id="timer-label">Focus session</div>
+      </div>
+      <div id="timer-progress"><div id="timer-bar" style="width:100%"></div></div>
+      <div id="timer-mode-row">
+        <button class="timer-mode-btn active" id="btn-work" onclick="switchMode('work')">WORK</button>
+        <button class="timer-mode-btn" id="btn-break" onclick="switchMode('break')">BREAK</button>
+      </div>
+      <div id="timer-controls">
+        <button class="sdv-btn primary" id="timer-toggle-btn" onclick="toggleTimer()">▶ START</button>
+        <button class="sdv-btn" onclick="resetTimer()">↺ RESET</button>
+      </div>
+      <div id="timer-settings">
+        <label>Work (min)<input type="number" id="work-dur" value="25" min="1" max="60" onchange="applySettings()"></label>
+        <label>Break (min)<input type="number" id="break-dur" value="5" min="1" max="30" onchange="applySettings()"></label>
+      </div>
+      <div id="pomodoro-count">🍅 Pomodoros: <span id="pomo-count">0</span></div>
+    </div>
+
+    <div id="tasks-section">
+      <div class="section-label">📋 TASKS</div>
+      <div id="tasks-inner">
+        <div id="add-task-row">
+          <input type="text" id="task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+          <select id="dur-input">
+            <option value="5">~5m</option>
+            <option value="15">~15m</option>
+            <option value="30" selected>~30m</option>
+            <option value="60">~60m</option>
+            <option value="90">~90m</option>
+          </select>
+          <button class="sdv-btn primary" onclick="addTask()">ADD</button>
+        </div>
+        <div id="task-list"></div>
+        <div id="empty-tasks">No tasks yet!<br>Add one above ↑<br><br>🌱 Tasks grow plants!<br>Click a task to focus it.</div>
+      </div>
+    </div>
+
+    <div id="bottom-bar">
+      <button class="sdv-btn" onclick="saveData()">💾 DOWNLOAD</button>
+      <button class="sdv-btn" onclick="document.getElementById('load-input').click()">📂 UPLOAD</button>
+      <div id="bottom-bar-note">Data lives in<br>your browser</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let tasks        = [];
+let gardenHistory = [];
+let pomodoroCount = 0;
+let avatar       = { color: '#7ecfb3' };
+let activeTaskId = null;   // id of the currently-growing task
+
+let timerMode    = 'work';
+let timerRunning = false;
+let timerSeconds = 25 * 60;
+let timerTotal   = 25 * 60;
+let timerInterval = null;
+
+/* ═══════════════════════════════════════════
+   PLANT GROWTH SYSTEM
+
+   Each plant type has 5 emoji stages (indices 0-4):
+     0 = seed/sprout  (added to garden immediately on task add)
+     1 = early growth  \
+     2 = mid growth     | active task progresses through these over time
+     3 = nearly bloomed /
+     4 = full bloom    (only on task completion)
+═══════════════════════════════════════════ */
+const PLANT_STAGES = {
+  tea:       ['🌱','🌿','🍃','🫖','🍵'],
+  berry:     ['🌱','🪴','🌸','🍒','🍓'],
+  sunflower: ['🌱','🌿','🌼','🌻','🌻'],
+  bonsai:    ['🌱','🪴','🌲','🌲','🌲'],
+  blossom:   ['🌱','🌿','🌸','💮','🌸'],
+};
+const PLANT_LABELS = { tea:'Tea', berry:'Berry', sunflower:'Sunflower', bonsai:'Bonsai', blossom:'Blossom' };
+const STAGE_NAMES  = ['Seed','Sprout','Growing','Blooming','Bloomed!'];
+
+let growthInterval = null;
+
+function bucketPlant(mins) {
+  const buckets = [5,15,30,60,90];
+  const types   = ['tea','berry','sunflower','bonsai','blossom'];
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < buckets.length; i++) {
+    const d = Math.abs(mins - buckets[i]);
+    if (d < bestDist) { bestDist = d; best = i; }
+  }
+  return types[best];
+}
+
+function getTask(id) { return tasks.find(t => t.id === id); }
+
+/* Start ticking growth for the active task.
+   3 ticks spread evenly over its duration (min 8s, max 60s each). */
+function startGrowth(taskId) {
+  clearInterval(growthInterval);
+  const t = getTask(taskId);
+  if (!t || t.done) return;
+  const tickSec = Math.min(60, Math.max(8, Math.floor(t.duration * 60 / 3)));
+  growthInterval = setInterval(() => {
+    const task = getTask(taskId);
+    if (!task || task.done || task.stage >= 3) { clearInterval(growthInterval); return; }
+    task.stage++;
+    renderGarden();
+    renderTasks();
+  }, tickSec * 1000);
+}
+
+function setActiveTask(id) {
+  clearInterval(growthInterval);
+  activeTaskId = id;
+  renderGarden();
+  renderTasks();
+  if (id !== null) startGrowth(id);
+}
+
+/* ═══════════════════════════════════════════
+   GARDEN RENDER
+═══════════════════════════════════════════ */
+function renderGarden() {
+  const grid = document.getElementById('garden-grid');
+  grid.innerHTML = '';
+  const slotTasks = tasks.slice(0, 25);
+
+  for (let i = 0; i < 25; i++) {
+    const slot = document.createElement('div');
+    const t    = slotTasks[i];
+
+    if (t) {
+      const stage   = t.done ? 4 : (t.stage || 0);
+      const emoji   = PLANT_STAGES[t.plantType][stage];
+      const isActive = (t.id === activeTaskId) && !t.done;
+      const isNew   = (i === tasks.length - 1) && !t.done && stage === 0;
+
+      slot.className = 'plant-slot filled' +
+        (t.done    ? ' done-slot'         : '') +
+        (isActive  ? ' active-task-slot'  : '') +
+        (!t.done   ? ' clickable'         : '') +
+        (isNew     ? ' new-plant'         : '');
+      slot.textContent = emoji;
+      slot.title = `${t.title} — ${PLANT_LABELS[t.plantType]} (${STAGE_NAMES[stage]})`;
+
+      // Stage label
+      const lbl = document.createElement('span');
+      lbl.className = 'stage-lbl';
+      lbl.textContent = STAGE_NAMES[stage].slice(0,3);
+      slot.appendChild(lbl);
+
+      if (!t.done) slot.onclick = () => setActiveTask(t.id);
+    } else {
+      slot.className = 'plant-slot';
+    }
+    grid.appendChild(slot);
+  }
+
+  const doneCount = tasks.filter(t => t.done).length;
+  document.getElementById('garden-count').textContent = doneCount + '/' + Math.min(tasks.length, 25);
+}
+
+/* ═══════════════════════════════════════════
+   POM-POM CANVAS (in sky strip)
+═══════════════════════════════════════════ */
+const canvas = document.getElementById('pompom-canvas');
+const ctx    = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width  = document.getElementById('sky-strip').clientWidth;
+  canvas.height = 80;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const POMPOM_COLORS = ['#7ecfb3','#f0a8c0','#a8b8f0','#f0d0a8','#b8a8f0','#f4d76b','#ff9999'];
+
+let pp = {
+  x:80, y:0, vx:0.7, vy:-1.2,
+  gravity:0.07, bounce:-2.2,
+  state:'wander', frame:0,
+  wobblePhase:0, blinkTimer:0, blinking:false,
+  wateringTimer:0, celebrateTimer:0, restTimer:0,
+  squish:1, squishV:0
+};
+
+function setPompomState(s, dur) {
+  pp.state = s;
+  pp.wateringTimer  = s === 'water'     ? (dur || 180) : 0;
+  pp.celebrateTimer = s === 'celebrate' ? (dur || 140) : 0;
+  pp.restTimer      = s === 'rest'      ? (dur || 9999): 0;
+}
+
+function shadeColor(hex, amt) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.max(0, Math.min(255, (n>>16) + amt));
+  const g = Math.max(0, Math.min(255, ((n>>8)&0xff) + amt));
+  const b = Math.max(0, Math.min(255, (n&0xff) + amt));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+function drawSky() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  // Grass strip
+  ctx.fillStyle = '#5a9e4a'; ctx.fillRect(0, H-18, W, 18);
+  ctx.fillStyle = '#4a7c3f'; ctx.fillRect(0, H-13, W, 13);
+  drawPompom(H);
+}
+
+function drawPompom(H) {
+  const s = pp;
+  const baseY = H - 16;
+  const sq = s.squish;
+  const bodyW = Math.round(26*(1/sq));
+  const bodyH = Math.round(22*sq);
+  const cx = Math.round(s.x);
+  const cy = Math.round(baseY - bodyH*0.5 + s.y);
+  const col = avatar.color;
+  const dir = s.vx >= 0 ? 1 : -1;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fillRect(cx - bodyW/2+2, baseY-3, bodyW-4, 4);
+
+  // Body pixels
+  ctx.fillStyle = col;
+  const hw = Math.floor(bodyW/2), hh = Math.floor(bodyH/2);
+  for (let py = -hh; py <= hh; py++) {
+    const rw = Math.round(hw * Math.sqrt(Math.max(0, 1-(py/hh)**2))) * 2;
+    if (rw > 0) ctx.fillRect(cx - rw/2, cy+py, rw, 1);
+  }
+  // Border
+  ctx.fillStyle = shadeColor(col, -35);
+  for (let px2 = -hw; px2 <= hw; px2++) {
+    const by2 = cy - Math.round(hh * Math.sqrt(Math.max(0, 1-(px2/hw)**2)));
+    ctx.fillRect(cx+px2, by2, 1, 2);
+  }
+
+  // Eyes
+  if (s.state !== 'rest') {
+    const eyeH = s.blinking ? 1 : 4;
+    [-7,7].forEach(ex => {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx + ex*dir - 2, cy-5, 5, eyeH);
+      if (!s.blinking) {
+        ctx.fillStyle = '#1a5040';
+        ctx.fillRect(cx + ex*dir - 1 + dir, cy-4, 2, 3);
+      }
+    });
+  } else {
+    ctx.fillStyle = '#1a5040';
+    [-7,7].forEach(ex => ctx.fillRect(cx + ex*dir - 2, cy-3, 5, 2));
+    ctx.font = 'bold 8px "Press Start 2P"';
+    ctx.fillStyle = 'rgba(80,80,80,.8)';
+    ctx.fillText('z', cx + dir*18, cy-12 - Math.sin(s.frame*.04)*2);
+  }
+
+  // Blush
+  ctx.fillStyle = 'rgba(240,130,130,.45)';
+  [-9,9].forEach(bx => ctx.fillRect(cx + bx*dir - 3, cy+4, 6, 3));
+
+  // Watering can
+  if (s.state === 'water') {
+    const fr = s.vx >= 0;
+    const cx2 = cx+(fr?18:-18), cy2 = cy-7;
+    ctx.fillStyle = '#a0b8d0'; ctx.fillRect(cx2-7, cy2-5, 14, 9);
+    ctx.fillStyle = '#7090b0'; ctx.fillRect(cx2-7, cy2-5, 14, 2);
+    ctx.fillRect(cx2+(fr?7:-14), cy2-8, 7, 3);
+    if (s.frame%8 < 4) {
+      ctx.fillStyle = '#6aade4';
+      [0,5,10].forEach((o,i) => ctx.fillRect(cx2+(fr?14+o:-14-o), cy2-5+i*4+(s.frame%4)*2, 2, 2));
+    }
+  }
+
+  // Sparkles
+  if (s.state === 'celebrate') {
+    ctx.fillStyle = '#f5c518';
+    [[-16,-16],[16,-18],[0,-24],[-10,-28],[10,-28]].forEach(([sx,sy],i) => {
+      if ((s.frame+i*6)%18 < 9) ctx.fillRect(cx+sx-2, cy+sy-2, 4, 4);
+    });
+  }
+}
+
+function updatePompom() {
+  const W = canvas.width, s = pp;
+  s.frame++;
+  s.blinkTimer++;
+  if (s.blinkTimer > 195 && !s.blinking) { s.blinking = true;  s.blinkTimer = 0; }
+  if (s.blinking   && s.blinkTimer > 7)  { s.blinking = false; s.blinkTimer = 0; }
+  s.squishV += (-s.squish + 1)*.25; s.squishV *= .6; s.squish += s.squishV;
+
+  if (s.state === 'wander') {
+    s.vy += s.gravity; s.x += s.vx; s.y += s.vy;
+    if (s.x > W-40 && s.vx > 0) s.vx = -Math.abs(s.vx);
+    if (s.x < 40   && s.vx < 0) s.vx =  Math.abs(s.vx);
+    if (s.y > 0) { s.y = 0; s.vy = s.bounce; s.vx += (Math.random()-.5)*.4; s.squish = 1.38; }
+  }
+  if (s.state === 'water') {
+    const tgt = W*.55;
+    s.x += (tgt-s.x)*.05; s.vx = tgt > s.x ? 1 : -1;
+    s.wateringTimer--; if (s.wateringTimer <= 0) setPompomState('wander');
+  }
+  if (s.state === 'celebrate') {
+    s.wobblePhase += .09; s.y = Math.sin(s.wobblePhase)*8;
+    s.celebrateTimer--; if (s.celebrateTimer <= 0) { s.y = 0; setPompomState('wander'); }
+  }
+  if (s.state === 'rest') {
+    s.vx = 0; s.restTimer--; if (s.restTimer <= 0) setPompomState('wander');
+  }
+
+  const msg = { wander:'Bouncing...', water:'Watering...', celebrate:'WOOO! ✨', rest:'zzz...' };
+  document.getElementById('pompom-status').textContent = '' + (msg[s.state] || '...');
+}
+
+function loop() { updatePompom(); drawSky(); requestAnimationFrame(loop); }
+loop();
+
+/* ── Avatar modal ── */
+let avatarOpen = false;
+function toggleAvatarModal() {
+  avatarOpen = !avatarOpen;
+  document.getElementById('avatar-modal').classList.toggle('open', avatarOpen);
+}
+function buildSwatches() {
+  const row = document.getElementById('color-row');
+  row.innerHTML = '';
+  POMPOM_COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (c === avatar.color ? ' active' : '');
+    sw.style.background = c;
+    sw.onclick = () => { avatar.color = c; buildSwatches(); };
+    row.appendChild(sw);
+  });
+}
+buildSwatches();
+
+/* ═══════════════════════════════════════════
+   TASKS
+═══════════════════════════════════════════ */
+let nextTaskId = 1;
+
+function addTask() {
+  const input = document.getElementById('task-input');
+  const title = input.value.trim();
+  if (!title) return;
+  const dur = parseInt(document.getElementById('dur-input').value);
+  const newTask = {
+    id: nextTaskId++, title, duration: dur,
+    done: false, aiResult: null,
+    plantType: bucketPlant(dur), stage: 0
+  };
+  tasks.push(newTask);
+  input.value = '';
+  // Auto-select first task, or if no current active task
+  if (activeTaskId === null) {
+    setActiveTask(newTask.id);
+  } else {
+    renderGarden();
+    renderTasks();
+  }
+}
+
+function renderTasks() {
+  const list  = document.getElementById('task-list');
+  const empty = document.getElementById('empty-tasks');
+  if (tasks.length === 0) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  tasks.forEach(t => {
+    const stage    = t.done ? 4 : (t.stage || 0);
+    const emoji    = PLANT_STAGES[t.plantType][stage];
+    const isActive = (t.id === activeTaskId) && !t.done;
+    const item     = document.createElement('div');
+    item.className = 'task-item' + (t.done ? ' done' : '') + (isActive ? ' active-task' : '');
+    if (!t.done) item.onclick = (e) => {
+      if (!e.target.closest('.task-check') && !e.target.closest('.task-actions'))
+        setActiveTask(t.id);
+    };
+    item.innerHTML = `
+      <div class="task-check${t.done?' checked':''}" onclick="toggleTask(${t.id});event.stopPropagation()"></div>
+      <div class="task-body">
+        <div class="task-title">${escHtml(t.title)}</div>
+        <div class="task-meta">
+          <span class="task-badge badge-${t.plantType}">${emoji} ${PLANT_LABELS[t.plantType]}</span>
+          <span class="task-dur">${t.duration}m</span>
+          <span class="task-stage-info">${isActive?'🌟 ':''}${STAGE_NAMES[stage]}</span>
+        </div>
+        ${t.aiResult?`<div class="task-ai-result">${t.aiResult}</div>`:''}
+      </div>
+      <div class="task-actions">
+        <button class="sdv-btn ai-btn" onclick="breakdownTask(${t.id});event.stopPropagation()">AI</button>
+        <button class="sdv-btn danger"  onclick="deleteTask(${t.id});event.stopPropagation()">✕</button>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function toggleTask(id) {
+  const t = getTask(id);
+  if (!t || t.done) return;
+  t.done  = true;
+  t.stage = 4;
+  // Advance active task to next undone if this was it
+  if (activeTaskId === id) {
+    clearInterval(growthInterval);
+    const next = tasks.find(x => !x.done && x.id !== id);
+    setActiveTask(next ? next.id : null);
+  } else {
+    renderGarden();
+    renderTasks();
+  }
+  setPompomState('celebrate', 140);
+  setTimeout(() => setPompomState('water', 160), 900);
+  setTimeout(() => setPompomState('wander'), 3000);
+}
+
+function deleteTask(id) {
+  const wasActive = (activeTaskId === id);
+  tasks = tasks.filter(t => t.id !== id);
+  if (wasActive) {
+    clearInterval(growthInterval);
+    const next = tasks.find(t => !t.done);
+    setActiveTask(next ? next.id : null);
+  } else {
+    renderGarden();
+    renderTasks();
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function breakdownTask(id) {
+  const t = getTask(id);
+  if (!t) return;
+  t.aiResult = '<span class="ai-loading">Thinking...</span>';
+  renderTasks();
+  try {
+    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer YOUR_PERPLEXITY_API_KEY' },
+      body: JSON.stringify({
+        model:'sonar',
+        messages:[{ role:'user', content:`Break down this task into 2-4 concise subtasks. Task: "${t.title}" (${t.duration} min). Format: "• subtask (Xmin)" per line, then "Total: Xmin".` }],
+        max_tokens:200
+      })
+    });
+    const data = await res.json();
+    t.aiResult = data.choices?.[0]?.message?.content?.replace(/\n/g,'<br>') || 'No breakdown returned.';
+  } catch(e) {
+    t.aiResult = '<i>Add your Perplexity API key to enable AI breakdown.</i>';
+  }
+  renderTasks();
+}
+
+/* ═══════════════════════════════════════════
+   POMODORO
+═══════════════════════════════════════════ */
+function formatTime(s) { return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+function updateTimerDisplay() {
+  document.getElementById('timer-time').textContent = formatTime(timerSeconds);
+  document.getElementById('timer-bar').style.width  = (timerSeconds/timerTotal*100)+'%';
+  document.getElementById('timer-bar').style.background = timerMode==='work' ? '#c0392b' : '#1a8c6e';
+  document.getElementById('timer-label').textContent = timerMode==='work' ? 'Focus session' : 'Break time ☕';
+}
+function toggleTimer() {
+  if (timerRunning) {
+    clearInterval(timerInterval); timerRunning = false;
+    document.getElementById('timer-toggle-btn').textContent = '▶ RESUME';
+  } else {
+    timerRunning = true;
+    document.getElementById('timer-toggle-btn').textContent = '⏸ PAUSE';
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval); timerRunning = false;
+        if (timerMode === 'work') {
+          pomodoroCount++;
+          document.getElementById('pomo-count').textContent = pomodoroCount;
+          switchMode('break'); setPompomState('rest');
+        } else { switchMode('work'); setPompomState('wander'); }
+        document.getElementById('timer-toggle-btn').textContent = '▶ START';
+      }
+      updateTimerDisplay();
+    }, 1000);
+  }
+}
+function resetTimer() {
+  clearInterval(timerInterval); timerRunning = false;
+  timerSeconds = timerTotal;
+  document.getElementById('timer-toggle-btn').textContent = '▶ START';
+  updateTimerDisplay();
+}
+function switchMode(mode) {
+  clearInterval(timerInterval); timerRunning = false;
+  timerMode = mode;
+  const wm = parseInt(document.getElementById('work-dur').value)  || 25;
+  const bm = parseInt(document.getElementById('break-dur').value) || 5;
+  timerTotal = timerSeconds = (mode==='work' ? wm : bm) * 60;
+  document.getElementById('btn-work').className  = 'timer-mode-btn'+(mode==='work'  ? ' active' : '');
+  document.getElementById('btn-break').className = 'timer-mode-btn'+(mode==='break' ? ' active break-active' : '');
+  document.getElementById('timer-toggle-btn').textContent = '▶ START';
+  updateTimerDisplay();
+  if (mode==='break') setPompomState('rest'); else setPompomState('wander');
+}
+function applySettings() { switchMode(timerMode); }
+updateTimerDisplay();
+
+/* ═══════════════════════════════════════════
+   SAVE / LOAD
+═══════════════════════════════════════════ */
+function saveData() {
+  const data = { tasks, gardenHistory, avatar, pomodoroCount, activeTaskId };
+  const blob = new Blob([JSON.stringify(data,null,2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'pom-pomodoro.json'; a.click();
+}
+function loadData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      tasks         = d.tasks         || [];
+      gardenHistory = d.gardenHistory  || [];
+      pomodoroCount = d.pomodoroCount  || 0;
+      avatar        = d.avatar         || { color:'#7ecfb3' };
+      activeTaskId  = d.activeTaskId   || null;
+      nextTaskId    = tasks.reduce((mx,t) => Math.max(mx,t.id||0),0)+1;
+      clearInterval(growthInterval);
+      if (activeTaskId) startGrowth(activeTaskId);
+      renderTasks(); renderGarden(); buildSwatches();
+      document.getElementById('pomo-count').textContent = pomodoroCount;
+    } catch(err) { alert('Could not load session file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+/* Init */
+renderGarden();
+renderTasks();
+</script>
+</body>
+</html>
