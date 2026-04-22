@@ -1762,7 +1762,7 @@ Rules: 1-5 subtasks, minutes must be positive integers, total_minutes is the sum
        SAVE / LOAD
     ═══════════════════════════════════════════ */
     function saveData() {
-      const data = { tasks, gardenHistory, avatar, pomodoroCount, activeTaskId };
+      const data = { tasks, gardenHistory, avatar, pomodoroCount, activeTaskId, farmName };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = 'pom-pomodoro.json'; a.click();
@@ -1778,6 +1778,8 @@ Rules: 1-5 subtasks, minutes must be positive integers, total_minutes is the sum
           pomodoroCount = d.pomodoroCount || 0;
           avatar = d.avatar || { color: '#7ecfb3' };
           activeTaskId = d.activeTaskId || null;
+          farmName      = d.farmName       || 'Pom-Pom\'s Garden';
+          const gn = document.getElementById('garden-name'); if (gn) gn.textContent = farmName.toUpperCase();
           nextTaskId = tasks.reduce((mx, t) => Math.max(mx, t.id || 0), 0) + 1;
           clearInterval(growthInterval);
           if (activeTaskId) startGrowth(activeTaskId);
