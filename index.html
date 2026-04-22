@@ -135,6 +135,15 @@
       letter-spacing: 1px;
     }
 
+    #garden-name {
+      cursor: pointer;
+      transition: all 0.1s;
+      user-select: none;
+    }
+    #garden-name:hover {
+      filter: brightness(1.15);
+    }
+
     /* Pom-Pom canvas — fills bottom of sky strip */
     #pompom-canvas {
       position: absolute;
@@ -1051,7 +1060,11 @@
           style="top:40px;left:0;width:48px;height:11px;animation-duration:82s;animation-delay:-38s;opacity:.6;">
           <div class="cloud-bump" style="top:-7px;left:7px;width:17px;height:10px;"></div>
         </div>
-        <div id="garden-sign"><span>🌿 POM-POM'S GARDEN 🌿</span></div>
+        <div id="garden-sign">
+          <span>🌿 </span>
+          <span id="garden-name" onclick="renameFarm()">POM-POM'S GARDEN</span>
+          <span> 🌿</span>
+        </div>
         <canvas id="pompom-canvas"></canvas>
       </div>
 
@@ -1175,6 +1188,7 @@
     let tasks = [];
     let gardenHistory = [];
     let pomodoroCount = 0;
+    let farmName = 'Pom-Pom\'s Garden';
     let avatar = { color: '#7ecfb3' };
     let activeTaskId = null;   // id of the currently-growing task
 
@@ -1196,10 +1210,10 @@
     ═══════════════════════════════════════════ */
     const PLANT_STAGES = {
       tea: ['🌱', '🌿', '🍃', '🫖', '🍵'],
-      berry: ['🌱', '🪴', '🌸', '🍒', '🍓'],
-      sunflower: ['🌱', '🌿', '🌼', '🌻', '🌻'],
-      bonsai: ['🌱', '🪴', '🌲', '🌲', '🌲'],
-      blossom: ['🌱', '🌿', '🌸', '💮', '🌸'],
+      berry: ['🌱', '🌿', '🪴', '🌸', '🍓'],
+      sunflower: ['🌱', '🌿', '🌼', '🌼', '🌻'],
+      bonsai: ['🌱', '🌿', '🪴', '🪴', '🌲'],
+      blossom: ['🌱', '🌿', '🌸', '🌸', '💮'],
     };
     const PLANT_LABELS = { tea: 'Tea', berry: 'Berry', sunflower: 'Sunflower', bonsai: 'Bonsai', blossom: 'Blossom' };
     const STAGE_NAMES = ['Seed', 'Sprout', 'Growing', 'Blooming', 'Bloomed!'];
@@ -1218,6 +1232,14 @@
     }
 
     function getTask(id) { return tasks.find(t => t.id === id); }
+
+    function renameFarm() {
+      const next = prompt('Enter new garden name:', farmName);
+      if (next && next.trim()) {
+        farmName = next.trim();
+        document.getElementById('garden-name').textContent = farmName.toUpperCase();
+      }
+    }
 
     /* Start ticking growth for the active task.
        3 ticks spread evenly over its duration. Only advances when timer is running. */
@@ -1270,12 +1292,6 @@
             (isNew ? ' new-plant' : '');
           slot.textContent = emoji;
           slot.title = `${t.title} — ${PLANT_LABELS[t.plantType]} (${STAGE_NAMES[stage]})`;
-
-          // Stage label
-          const lbl = document.createElement('span');
-          lbl.className = 'stage-lbl';
-          lbl.textContent = STAGE_NAMES[stage].slice(0, 3);
-          slot.appendChild(lbl);
 
           if (!t.done) slot.onclick = () => setActiveTask(t.id);
         } else {
